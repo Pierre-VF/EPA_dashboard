@@ -6,5 +6,5 @@ plotly==5.24.0
 numpy<2.1
 pandas==2.2.2
 pytz==2024.1
-enedis-data-io @ https://github.com/Pierre-VF/Enedis-data-io.git
+enedis-data-io @ git+https://github.com/Pierre-VF/Enedis-data-io.git
 urllib3==2.2.3
