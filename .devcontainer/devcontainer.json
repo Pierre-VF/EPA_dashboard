@@ -10,7 +10,21 @@
       ]
     },
     "vscode": {
-      "settings": {},
+      "extensions": [
+				"ms-python.python",
+        "charliermarsh.ruff",
+				"ms-python.vscode-pylance"
+			],
+      "settings": {
+        "[python]": {
+					"editor.codeActionsOnSave": {
+						"source.organizeImports": "always",
+						"source.fixAll": "explicit"
+					},
+					"editor.formatOnSave": true,
+					"editor.defaultFormatter": "charliermarsh.ruff"
+        }
+      },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance"
