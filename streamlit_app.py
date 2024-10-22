@@ -3,6 +3,7 @@ import streamlit as st
 import pydantic_settings
 import os
 from datetime import UTC, datetime, timedelta, date
+from pickle import load, dump
 
 import numpy as np
 import pandas as pd
@@ -27,6 +28,7 @@ class Settings(pydantic_settings.BaseSettings):
     #   "https://mon-compte-entreprise.enedis.fr/vos-donnees-energetiques/vos-api"
     ENEDIS_API_USERNAME: str
     ENEDIS_API_PASSWORD: str
+    MODE: str = "PRODUCTION"
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -39,14 +41,11 @@ api_io = ApiEntreprises(
     client_id=SETTINGS.ENEDIS_API_USERNAME, client_secret=SETTINGS.ENEDIS_API_PASSWORD
 )
 
-# Data loaders
-
 
 def local_disk_cache(f_in):
-    # For now, disabling this (for cloud deployment)
-    return f_in
-
-    from pickle import load, dump
+    if str(SETTINGS.MODE) == "PRODUCTION":
+        # Short circuiting
+        return f_in
 
     os.makedirs(".data", exist_ok=True)
     cache_file = f".data/{f_in.__name__}.pkl"
@@ -64,7 +63,7 @@ def local_disk_cache(f_in):
     return f_out
 
 
-@st.cache_data(ttl=12*3600, max_entries=2)  # TTL in seconds
+@st.cache_data(ttl=12*3600, max_entries=2)  # TTL en secondes
 def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
     if current_day is None:
         t_end = datetime.today().date()
@@ -120,8 +119,7 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
     return df_x, df_x_norm, s_yesterday
 
 
-st.title("Production énergétique des centrales d'Énergies Partagées en Alsace")
-st.write("")
+st.title("Production énergétique des centrales d'EPA")
 
 
 st.write("## Centrales actives")
