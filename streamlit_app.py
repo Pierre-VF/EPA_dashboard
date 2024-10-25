@@ -29,6 +29,7 @@ class Settings(pydantic_settings.BaseSettings):
     ENEDIS_API_USERNAME: str
     ENEDIS_API_PASSWORD: str
     MODE: str = "PRODUCTION"
+    MOT_DE_PASSE: str = ""
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -82,6 +83,7 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
                 df = df_c[[c]]
             else:
                 df[c] = df_c[c]
+
         except Exception as e:
             print(f"Error with {c} : {e}")
             c_erreurs.append(c)
@@ -94,7 +96,7 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
 
 
 @local_disk_cache
-def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
+def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     t0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     df = donnees_de_production(t0.date())
     df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24): t0].interpolate()
@@ -103,11 +105,6 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
                      timedelta(hours=24): t0].resample("h").mean().sum()
     for k, v in KWC_PAR_PRM.items():
         df_x_norm[k] = df_x[k] / v
-        if v is not None:
-            s_yesterday.loc[k] = s_yesterday.loc[k] / v
-        else:
-            s_yesterday.loc[k] = np.nan
-    s_yesterday: pd.Series = s_yesterday.sort_values()
 
     # Renommage des colonnes avec les addresses des centrales
     df_x = df_x.rename(columns=ADRESSE_PAR_PRM).sort_index()
@@ -116,7 +113,14 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
         lambda x: ADRESSE_PAR_PRM.get(x)
     )
 
-    return df_x, df_x_norm, s_yesterday
+    x_adresse = []
+    x_kwc = []
+    for k, v in ADRESSE_PAR_PRM.items():
+        x_adresse.append(v)
+        x_kwc.append(KWC_PAR_PRM.get(k, np.nan))
+    s_normaliser = pd.Series(x_kwc, index=x_adresse)
+
+    return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float)
 
 
 st.title("Production énergétique des centrales d'EPA")
@@ -125,18 +129,23 @@ st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
 
 # Loading data
-df_x, df_x_norm, s_yesterday = data_for_plot()
+df_x, df_x_norm, s_yesterday, s_normaliser = data_for_plot()
 
 # Markage des erreurs
 s_yesterday.loc[s_yesterday < 0] = -1
 
 st.write("Production pour les centrales actives:")
-df_actives = s_yesterday[s_yesterday > 0].to_frame("Production [kWh]")
+s_yesterday_norm = s_yesterday / s_normaliser
+df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
+    "Production [kWh/kWc]"
+)
+df_actives["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
+
 st.line_chart(
-    df_x_norm[s_yesterday[s_yesterday > 0].index],
+    df_x_norm[df_actives.index],
     y_label="Production [kWh/kWc]",
 )
-st.write("Production normalisée pour les centrales actives:")
+st.write("Production pour les centrales actives:")
 st.dataframe(df_actives.round(decimals=2))
 
 
@@ -155,3 +164,23 @@ st.write("## Production totale")
 
 st.write("Production totale")
 st.line_chart(data=df_x, y_label="Production [kWh]")
+
+
+@st.dialog("Veuillez confirmer votre mot de passe")
+def verifier_mot_de_passe_et_rafraichir():
+    mdp = st.text_input("Mot de passe")
+    if st.button("Submit"):
+        if mdp == SETTINGS.MOT_DE_PASSE:
+            donnees_de_production.clear()
+            st.rerun()
+            st.write(
+                "Les données ont été rafraichies - vous pouvez fermer cette boîte de dialogue"
+            )
+        else:
+            st.write("Mot de passe erroné")
+
+
+if st.button("Rafraîchir les données"):
+    verifier_mot_de_passe_et_rafraichir()
+else:
+    st.write(" ")
