@@ -46,7 +46,7 @@ Notes:
 
 ### Comment déployer une copie sur Streamlit
 
-Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions. Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
+Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions. Le déploiement peut se faire directement à partir de ce Github (en ajudstant tous les paramètres dans le fichier TOML). Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
 
 ## Crédits et contributions
 
