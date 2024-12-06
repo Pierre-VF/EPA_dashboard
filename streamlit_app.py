@@ -166,22 +166,24 @@ s_yesterday.loc[s_yesterday < 0] = -1
 
 st.write("Production pour les centrales actives:")
 s_yesterday_norm = s_yesterday / s_normaliser
-df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame("Production [kWh/kWc]")
-df_actives["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
+df_active_yesterday = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
+    "Production [kWh/kWc]"
+)
+df_active_yesterday["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
 
 fig_prod_kwh_per_kwc = px.line(
-    df_x_norm[df_actives.index],
+    df_x_norm[df_active_yesterday.index],
 )
 fig_prod_kwh_per_kwc.update_layout(dict(yaxis=dict(title="Production [kWh/kWc]")))
 st.plotly_chart(fig_prod_kwh_per_kwc, use_container_width=True)
 
-st.write("Production pour les centrales actives:")
-st.dataframe(df_actives.round(decimals=2))
+st.write("Production de la veille pour les centrales actives:")
+st.dataframe(df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"))
 
 
 st.write("## Centrales inactives ou sans données")
 
-st.write("Centrales avec production à zéro:")
+st.write("Centrales avec **production à zéro**:")
 s_no_production = s_yesterday[s_yesterday == 0]
 if len(s_no_production) == 0:
     st.write("(Aucune)")
@@ -191,7 +193,7 @@ else:
         hide_index=True,
     )
 
-st.write("Centrales avec données manquantes:")
+st.write("Centrales avec **données manquantes**:")
 s_no_data = s_yesterday[s_yesterday < 0]
 if len(s_no_data) == 0:
     st.write("(Aucune)")
