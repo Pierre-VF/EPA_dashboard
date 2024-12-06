@@ -1,16 +1,15 @@
-import pandas as pd
-import streamlit as st
-import pydantic_settings
 import os
-from datetime import UTC, datetime, timedelta, date
-from pickle import load, dump
+from datetime import UTC, date, datetime, timedelta
+from pickle import dump, load
 
 import numpy as np
 import pandas as pd
-from pytz import timezone
-
+import pydantic_settings
+import streamlit as st
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from enedis_data_io.fr import ApiEntreprises
-
+from pytz import timezone
 
 # ------------------------------------------------------
 #  Settings and base methods
@@ -30,6 +29,7 @@ class Settings(pydantic_settings.BaseSettings):
     ENEDIS_API_PASSWORD: str
     MODE: str = "PRODUCTION"
     MOT_DE_PASSE: str = ""
+    ROUTINES_ACTIVES: bool = True
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -43,6 +43,9 @@ api_io = ApiEntreprises(
 )
 
 
+# -------------------------------------------------------------------------------------
+#  Fonctions de chargement de données
+# -------------------------------------------------------------------------------------
 def local_disk_cache(f_in):
     if str(SETTINGS.MODE) == "PRODUCTION":
         # Short circuiting
@@ -64,7 +67,7 @@ def local_disk_cache(f_in):
     return f_out
 
 
-@st.cache_data(ttl=12*3600, max_entries=2)  # TTL en secondes
+@st.cache_data(ttl=12 * 3600, max_entries=2)  # TTL en secondes
 def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
     if current_day is None:
         t_end = datetime.today().date()
@@ -76,8 +79,7 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
     c_erreurs = []
     for c in prms:
         try:
-            df_c = api_io.production_par_demi_heure(
-                prm=c, start=t_start, end=t_end)
+            df_c = api_io.production_par_demi_heure(prm=c, start=t_start, end=t_end)
             df_c[c] = df_c["production_wh"].astype(float) / 1000
             if df is None:
                 df = df_c[[c]]
@@ -99,10 +101,9 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
 def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     t0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     df = donnees_de_production(t0.date())
-    df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24): t0].interpolate()
+    df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24) : t0].interpolate()
     df_x_norm = df_x[[]].copy()
-    s_yesterday = df[t0 -
-                     timedelta(hours=24): t0].resample("h").mean().sum()
+    s_yesterday = df[t0 - timedelta(hours=24) : t0].resample("h").mean().sum()
     for k, v in KWC_PAR_PRM.items():
         df_x_norm[k] = df_x[k] / v
 
@@ -123,22 +124,39 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float)
 
 
+# -------------------------------------------------------------------------------------
+# Routines à executer
+# -------------------------------------------------------------------------------------
+if SETTINGS.ROUTINES_ACTIVES:
+    s = BackgroundScheduler()
+
+    def routine_quotidienne():
+        print("I'm running a job")
+
+    cron_trigger = CronTrigger(
+        hour="*",  # Pour tester, une fois par heure pour l'instant
+    )
+
+    s.add_job(routine_quotidienne, trigger=cron_trigger)
+    s.start()
+
+
+# -------------------------------------------------------------------------------------
+# Présentation dans Streamlit
+# -------------------------------------------------------------------------------------
+
 st.title("Production énergétique des centrales d'EPA")
-
-
 st.write("## Centrales actives")
 
 # Loading data
 df_x, df_x_norm, s_yesterday, s_normaliser = data_for_plot()
 
-# Markage des erreurs
+# Marquage des erreurs
 s_yesterday.loc[s_yesterday < 0] = -1
 
 st.write("Production pour les centrales actives:")
 s_yesterday_norm = s_yesterday / s_normaliser
-df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
-    "Production [kWh/kWc]"
-)
+df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame("Production [kWh/kWc]")
 df_actives["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
 
 st.line_chart(
@@ -152,12 +170,24 @@ st.dataframe(df_actives.round(decimals=2))
 st.write("## Centrales inactives ou sans données")
 
 st.write("Centrales avec production à zéro:")
-st.dataframe(s_yesterday[s_yesterday == 0].index.to_series(
-).to_frame("Adresse").reset_index(drop=True), hide_index=True)
+s_no_production = s_yesterday[s_yesterday == 0]
+if len(s_no_production) == 0:
+    st.write("(Aucune)")
+else:
+    st.dataframe(
+        s_no_production.index.to_series().to_frame("Adresse").reset_index(drop=True),
+        hide_index=True,
+    )
 
 st.write("Centrales avec données manquantes:")
-st.dataframe(s_yesterday[s_yesterday < 0].index.to_series(
-).to_frame("Adresse").reset_index(drop=True), hide_index=True)
+s_no_data = s_yesterday[s_yesterday < 0]
+if len(s_no_data) == 0:
+    st.write("(Aucune)")
+else:
+    st.dataframe(
+        s_no_data.index.to_series().to_frame("Adresse").reset_index(drop=True),
+        hide_index=True,
+    )
 
 
 st.write("## Production totale")
