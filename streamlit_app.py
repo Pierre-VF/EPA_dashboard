@@ -146,6 +146,15 @@ if SETTINGS.ROUTINES_ACTIVES:
 # Présentation dans Streamlit
 # -------------------------------------------------------------------------------------
 
+st.set_page_config(
+    page_title="Production des centrales solaires",
+    page_icon=":material/sunny:",
+    layout="wide",
+    initial_sidebar_state="auto",
+    menu_items=None,
+)
+
+
 st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
 
