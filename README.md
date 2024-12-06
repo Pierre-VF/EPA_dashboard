@@ -48,6 +48,10 @@ Notes:
 
 Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions. Le déploiement peut se faire directement à partir de ce Github (en ajudstant tous les paramètres dans le fichier TOML). Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
 
+Suggestions opérationnelles:
+
+- Pour conserver votre service en état opérationnel, il peut être utile d'utiliser un CRON pour y faire régulièrement appel (un utilitaire gratuit pour faire cela se trouve [ici](https://cron-job.org/en/)). Dans ce cas, il est recommandé d'y configurer un appel toutes les 4 heures.
+
 ## Crédits et contributions
 
 Le code est gracieusement mis à disposition par la coopérative citoyenne de production d'énergie [Énergies partagées en Alsace](https://energies-partagees-alsace.coop/) et développé par 
