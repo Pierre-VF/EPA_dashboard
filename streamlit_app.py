@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import pydantic_settings
+import sendgrid
 import streamlit as st
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -31,6 +32,9 @@ class Settings(pydantic_settings.BaseSettings):
     MODE: str = "PRODUCTION"
     MOT_DE_PASSE: str = ""
     ROUTINES_ACTIVES: bool = False
+    SENDGRID_API_KEY: str = ""
+    SENDGRID_SENDER_ADDRESS: str = ""
+    DESTINATAIRES_ALERTES: str = ""  # si plusieurs, séparer par ";"
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -128,14 +132,68 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
 # -------------------------------------------------------------------------------------
 # Routines à executer
 # -------------------------------------------------------------------------------------
-if SETTINGS.ROUTINES_ACTIVES:
+
+alerts_active = (len(SETTINGS.DESTINATAIRES_ALERTES) > 0) and (
+    len(SETTINGS.SENDGRID_API_KEY) > 0
+)
+email_alerts_to = SETTINGS.DESTINATAIRES_ALERTES.split(";")
+sg_api_client = sendgrid.SendGridAPIClient(api_key=SETTINGS.SENDGRID_API_KEY)
+
+
+def send_email(msg: str, title: str, recipients: list[str]) -> None:
+    if len(recipients) < 1:
+        return
+    data = {
+        "personalizations": [
+            {
+                "to": [{"email": i} for i in recipients],
+                "subject": title,
+            }
+        ],
+        "from": {"email": SETTINGS.SENDGRID_SENDER_ADDRESS},
+        "content": [{"type": "text/plain", "value": msg}],
+    }
+    response = sg_api_client.client.mail.send.post(request_body=data)
+    print(f" - Sendgrid status={response.status_code} - details={response.body}")
+
+
+if SETTINGS.ROUTINES_ACTIVES and False:
+    # NOTE : this seems to run every time a loading of the page is made
+    # (it's therefore going to result in spamming if activated)
+    # Therefore it's disabled with "and False" for now
+    print("Running with active routines")
     s = BackgroundScheduler()
 
     def routine_quotidienne():
-        print("I'm running a job")
+        donnees_de_production.clear()
+        __, __, s_production_yesterday, __ = data_for_plot()
+        s_no_production = s_production_yesterday[s_production_yesterday == 0]
+        s_no_data = s_production_yesterday[s_production_yesterday < 0]
+        if alerts_active:
+            msgs = []
+            if len(s_no_production) > 0:
+                msgs += ["Pas de production hier sur les centrales suivantes:"]
+                for i in s_no_production.index.to_list():
+                    msgs += [f"- {i}"]
+            if len(s_no_data) > 0:
+                msgs += ["", "Pas de données hier sur les centrales suivantes:"]
+                for i in s_no_data.index.to_list():
+                    msgs += [f"- {i}"]
+
+            if len(msgs) > 0:
+                msg = "\n".join(msgs)
+                send_email(
+                    msg,
+                    title="Alerte production PV",
+                    recipients=email_alerts_to,
+                )
+
+            print("Sent out warnings via Sendgrid")
 
     cron_trigger = CronTrigger(
-        hour="*",  # Pour tester, une fois par heure pour l'instant
+        day="*",
+        hour=5,
+        minute=10,
     )
 
     s.add_job(routine_quotidienne, trigger=cron_trigger)
@@ -145,6 +203,15 @@ if SETTINGS.ROUTINES_ACTIVES:
 # -------------------------------------------------------------------------------------
 # Présentation dans Streamlit
 # -------------------------------------------------------------------------------------
+
+st.set_page_config(
+    page_title="Production des centrales solaires",
+    page_icon=":material/sunny:",
+    layout="wide",
+    initial_sidebar_state="auto",
+    menu_items=None,
+)
+
 
 st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
@@ -157,22 +224,24 @@ s_yesterday.loc[s_yesterday < 0] = -1
 
 st.write("Production pour les centrales actives:")
 s_yesterday_norm = s_yesterday / s_normaliser
-df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame("Production [kWh/kWc]")
-df_actives["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
+df_active_yesterday = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
+    "Production [kWh/kWc]"
+)
+df_active_yesterday["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
 
 fig_prod_kwh_per_kwc = px.line(
-    df_x_norm[df_actives.index],
+    df_x_norm[df_active_yesterday.index],
 )
 fig_prod_kwh_per_kwc.update_layout(dict(yaxis=dict(title="Production [kWh/kWc]")))
 st.plotly_chart(fig_prod_kwh_per_kwc, use_container_width=True)
 
-st.write("Production pour les centrales actives:")
-st.dataframe(df_actives.round(decimals=2))
+st.write("Production de la veille pour les centrales actives:")
+st.dataframe(df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"))
 
 
 st.write("## Centrales inactives ou sans données")
 
-st.write("Centrales avec production à zéro:")
+st.write("Centrales avec **production à zéro**:")
 s_no_production = s_yesterday[s_yesterday == 0]
 if len(s_no_production) == 0:
     st.write("(Aucune)")
@@ -182,7 +251,7 @@ else:
         hide_index=True,
     )
 
-st.write("Centrales avec données manquantes:")
+st.write("Centrales avec **données manquantes**:")
 s_no_data = s_yesterday[s_yesterday < 0]
 if len(s_no_data) == 0:
     st.write("(Aucune)")
