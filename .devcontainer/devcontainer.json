@@ -27,6 +27,8 @@
       },
       "extensions": [
         "mhutchie.git-graph",
+				"njpwerner.autodocstring",
+				"charliermarsh.ruff",
         "ms-python.python",
         "ms-python.vscode-pylance"
       ]
