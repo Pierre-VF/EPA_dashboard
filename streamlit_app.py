@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import pydantic_settings
+import sendgrid
 import streamlit as st
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -31,6 +32,9 @@ class Settings(pydantic_settings.BaseSettings):
     MODE: str = "PRODUCTION"
     MOT_DE_PASSE: str = ""
     ROUTINES_ACTIVES: bool = False
+    SENDGRID_API_KEY: str = ""
+    SENDGRID_SENDER_ADDRESS: str = ""
+    DESTINATAIRES_ALERTES: str = ""  # si plusieurs, séparer par ";"
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -128,14 +132,63 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
 # -------------------------------------------------------------------------------------
 # Routines à executer
 # -------------------------------------------------------------------------------------
+
+alerts_active = (len(SETTINGS.DESTINATAIRES_ALERTES) > 0) and (
+    len(SETTINGS.SENDGRID_API_KEY) > 0
+)
+email_alerts_to = SETTINGS.DESTINATAIRES_ALERTES.split(";")
+sg_api_client = sendgrid.SendGridAPIClient(api_key=SETTINGS.SENDGRID_API_KEY)
+
+
+def send_email(msg: str, title: str, recipients: list[str]) -> None:
+    if len(recipients) < 1:
+        return
+    data = {
+        "personalizations": [
+            {
+                "to": [{"email": i} for i in recipients],
+                "subject": title,
+            }
+        ],
+        "from": {"email": SETTINGS.SENDGRID_SENDER_ADDRESS},
+        "content": [{"type": "text/plain", "value": msg}],
+    }
+    response = sg_api_client.client.mail.send.post(request_body=data)
+    print(f" - Sendgrid status={response.status_code} - details={response.body}")
+
+
 if SETTINGS.ROUTINES_ACTIVES:
     s = BackgroundScheduler()
 
     def routine_quotidienne():
-        print("I'm running a job")
+        __, __, s_production_yesterday, __ = data_for_plot()
+        s_no_production = s_production_yesterday[s_production_yesterday == 0]
+        s_no_data = s_production_yesterday[s_production_yesterday < 0]
+        if alerts_active:
+            msgs = []
+            if len(s_no_production) > 0:
+                msgs += ["Pas de production hier sur les centrales suivantes:"]
+                for i in s_no_production.index.to_list():
+                    msgs += [f"- {i}"]
+            if len(s_no_data) > 0:
+                msgs += ["", "Pas de données hier sur les centrales suivantes:"]
+                for i in s_no_data.index.to_list():
+                    msgs += [f"- {i}"]
+
+            if len(msgs) > 0:
+                msg = "\n".join(msgs)
+                send_email(
+                    msg,
+                    title="Alerte production PV",
+                    recipients=email_alerts_to,
+                )
+
+            print("Send out warnings")
 
     cron_trigger = CronTrigger(
-        hour="*",  # Pour tester, une fois par heure pour l'instant
+        day="*",
+        hour=5,
+        minute=10,
     )
 
     s.add_job(routine_quotidienne, trigger=cron_trigger)
