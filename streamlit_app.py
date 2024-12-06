@@ -183,7 +183,7 @@ if SETTINGS.ROUTINES_ACTIVES:
                     recipients=email_alerts_to,
                 )
 
-            print("Send out warnings")
+            print("Sent out warnings via Sendgrid")
 
     cron_trigger = CronTrigger(
         day="*",
