@@ -4,6 +4,7 @@ from pickle import dump, load
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import pydantic_settings
 import streamlit as st
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -127,7 +128,7 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
 # -------------------------------------------------------------------------------------
 # Routines à executer
 # -------------------------------------------------------------------------------------
-if SETTINGS.ROUTINES_ACTIVES:
+if SETTINGS.ROUTINES_ACTIVES and False:
     s = BackgroundScheduler()
 
     def routine_quotidienne():
@@ -159,10 +160,12 @@ s_yesterday_norm = s_yesterday / s_normaliser
 df_actives = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame("Production [kWh/kWc]")
 df_actives["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
 
-st.line_chart(
+fig_prod_kwh_per_kwc = px.line(
     df_x_norm[df_actives.index],
-    y_label="Production [kWh/kWc]",
 )
+fig_prod_kwh_per_kwc.update_layout(dict(yaxis=dict(title="Production [kWh/kWc]")))
+st.plotly_chart(fig_prod_kwh_per_kwc, use_container_width=True)
+
 st.write("Production pour les centrales actives:")
 st.dataframe(df_actives.round(decimals=2))
 
@@ -193,7 +196,11 @@ else:
 st.write("## Production totale")
 
 st.write("Production totale")
-st.line_chart(data=df_x, y_label="Production [kWh]")
+fig_prod_totale = px.line(
+    df_x,
+)
+fig_prod_totale.update_layout(dict(yaxis=dict(title="Production [kWh]")))
+st.plotly_chart(fig_prod_totale, use_container_width=True)
 
 
 @st.dialog("Veuillez confirmer votre mot de passe")
