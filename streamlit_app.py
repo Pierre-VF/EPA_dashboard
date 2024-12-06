@@ -157,10 +157,15 @@ def send_email(msg: str, title: str, recipients: list[str]) -> None:
     print(f" - Sendgrid status={response.status_code} - details={response.body}")
 
 
-if SETTINGS.ROUTINES_ACTIVES:
+if SETTINGS.ROUTINES_ACTIVES and False:
+    # NOTE : this seems to run every time a loading of the page is made
+    # (it's therefore going to result in spamming if activated)
+    # Therefore it's disabled with "and False" for now
+    print("Running with active routines")
     s = BackgroundScheduler()
 
     def routine_quotidienne():
+        donnees_de_production.clear()
         __, __, s_production_yesterday, __ = data_for_plot()
         s_no_production = s_production_yesterday[s_production_yesterday == 0]
         s_no_data = s_production_yesterday[s_production_yesterday < 0]
