@@ -30,7 +30,7 @@ class Settings(pydantic_settings.BaseSettings):
     ENEDIS_API_PASSWORD: str
     MODE: str = "PRODUCTION"
     MOT_DE_PASSE: str = ""
-    ROUTINES_ACTIVES: bool = True
+    ROUTINES_ACTIVES: bool = False
 
     model_config = pydantic_settings.SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -128,7 +128,7 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
 # -------------------------------------------------------------------------------------
 # Routines à executer
 # -------------------------------------------------------------------------------------
-if SETTINGS.ROUTINES_ACTIVES and False:
+if SETTINGS.ROUTINES_ACTIVES:
     s = BackgroundScheduler()
 
     def routine_quotidienne():
