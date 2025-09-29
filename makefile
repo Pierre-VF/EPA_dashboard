@@ -2,8 +2,9 @@
 
 .PHONY: run
 run:
-	streamlit run streamlit_app.py
+	uv run streamlit run streamlit_app.py
 
+# Kept for backwards compatibility
 .PHONY: uv_run
 uv_run:
-	uv run --with-requirements requirements.txt streamlit run streamlit_app.py
+	uv run streamlit run streamlit_app.py

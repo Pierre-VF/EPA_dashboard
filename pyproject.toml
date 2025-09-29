@@ -1,0 +1,20 @@
+[project]
+name = "streamlit-app"
+version = "0.2.0"
+description = "App to visualise PV production"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "apscheduler>=3.11.0",
+    "enedis-data-io",
+    "numpy>=2.1",
+    "pandas>=2.2.2",
+    "plotly>=5.24.1",
+    "pydantic-settings>=2.4.0",
+    "pytz>=2024.1",
+    "sendgrid>=6.11.0",
+    "streamlit>=1.50.0",
+]
+
+[tool.uv.sources]
+enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.2.0" }
