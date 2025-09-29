@@ -123,7 +123,10 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     x_kwc = []
     for k, v in ADRESSE_PAR_PRM.items():
         x_adresse.append(v)
-        x_kwc.append(KWC_PAR_PRM.get(k, np.nan))
+        i_kwc = KWC_PAR_PRM.get(k)
+        if (i_kwc is None) or (i_kwc == 0):
+            i_kwc = np.nan
+        x_kwc.append(i_kwc)
     s_normaliser = pd.Series(x_kwc, index=x_adresse)
 
     return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float)
