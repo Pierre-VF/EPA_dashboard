@@ -204,6 +204,25 @@ if SETTINGS.ROUTINES_ACTIVES and False:
     s.start()
 
 
+def show_dataframe_as_figure_in_streamlit(df: pd.DataFrame, yaxis_title: str) -> None:
+    tickvals = pd.date_range(
+        start=df.index[0].floor("D") + pd.Timedelta(hours=12),
+        end=df.index[-1].ceil("D") + pd.Timedelta(hours=12),
+        freq="24H",
+    )
+
+    fig = px.line(df)
+
+    fig.update_layout(
+        xaxis=dict(
+            tickvals=tickvals,
+            tickformat="%Y-%m-%d\n%h:%M",
+        ),
+        yaxis=dict(title=yaxis_title),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
 # -------------------------------------------------------------------------------------
 # Présentation dans Streamlit
 # -------------------------------------------------------------------------------------
@@ -233,11 +252,10 @@ df_active_yesterday = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
 )
 df_active_yesterday["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
 
-fig_prod_kwh_per_kwc = px.line(
+show_dataframe_as_figure_in_streamlit(
     df_x_norm[df_active_yesterday.index],
+    "Production [kWh/kWc]",
 )
-fig_prod_kwh_per_kwc.update_layout(dict(yaxis=dict(title="Production [kWh/kWc]")))
-st.plotly_chart(fig_prod_kwh_per_kwc, use_container_width=True)
 
 st.write("Production de la veille pour les centrales actives:")
 
@@ -278,18 +296,16 @@ c_under_36kwc = [k for k, v in KWC_PAR_ADDRESSE.items() if v <= 36]
 c_over_36kwc = [k for k, v in KWC_PAR_ADDRESSE.items() if v > 36]
 
 st.write("Production totale (> 36 kWc)")
-fig_prod_totale = px.line(
+show_dataframe_as_figure_in_streamlit(
     df_x[c_over_36kwc],
+    "Production [kWh]",
 )
-fig_prod_totale.update_layout(dict(yaxis=dict(title="Production [kWh]")))
-st.plotly_chart(fig_prod_totale, use_container_width=True)
 
 st.write("Production totale (<= 36 kWc)")
-fig_prod_totale = px.line(
+show_dataframe_as_figure_in_streamlit(
     df_x[c_under_36kwc],
+    "Production [kWh]",
 )
-fig_prod_totale.update_layout(dict(yaxis=dict(title="Production [kWh]")))
-st.plotly_chart(fig_prod_totale, use_container_width=True)
 
 
 @st.dialog("Veuillez confirmer votre mot de passe")
