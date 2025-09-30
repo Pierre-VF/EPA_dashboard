@@ -208,7 +208,7 @@ def show_dataframe_as_figure_in_streamlit(df: pd.DataFrame, yaxis_title: str) ->
     tickvals = pd.date_range(
         start=df.index[0].floor("D") + pd.Timedelta(hours=12),
         end=df.index[-1].ceil("D") + pd.Timedelta(hours=12),
-        freq="24H",
+        freq="24h",
     )
 
     fig = px.line(df)
@@ -216,16 +216,58 @@ def show_dataframe_as_figure_in_streamlit(df: pd.DataFrame, yaxis_title: str) ->
     fig.update_layout(
         xaxis=dict(
             tickvals=tickvals,
-            tickformat="%Y-%m-%d\n%h:%M",
+            tickformat="%Y-%m-%d\n%H:%M",
         ),
         yaxis=dict(title=yaxis_title),
+        # Affichage de la légende sous le graphique
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+        ),
+        # width=900,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(
+        fig,
+        # use_container_width=False
+    )
 
 
 # -------------------------------------------------------------------------------------
 # Présentation dans Streamlit
 # -------------------------------------------------------------------------------------
+
+# Pour permettre l'impression (e.g. rapports etc)# Custom CSS for print
+st.html(
+    """
+    <style>
+    @media print {
+        .main {
+            width: 20cm;
+            padding: 0;
+            margin: 0;
+        }
+        .stApp {
+            max-width: 18cm;
+        }
+        .print-container {
+            width: 15cm;
+            margin: 0 auto; /* Center the container */
+            padding: 10px;
+        }
+        .stPlotlyChart, .stDataFrame, table {
+            max-width: 19cm !important;
+            width: 100% !important;
+            overflow: show
+            /* overflow: hidden !important; */
+        }
+    }
+    </style>
+    """,
+)
+
 
 st.set_page_config(
     page_title="Production des centrales solaires",
@@ -263,7 +305,10 @@ st.write("Production de la veille pour les centrales actives:")
 df_active_yesterday["kWc"] = [
     KWC_PAR_ADDRESSE[i] for i in df_active_yesterday.index.to_list()
 ]
-st.dataframe(df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"))
+st.dataframe(
+    df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"),
+    width="content",
+)
 
 
 st.write("## Centrales inactives ou sans données")
@@ -276,6 +321,7 @@ else:
     st.dataframe(
         s_no_production.index.to_series().to_frame("Adresse").reset_index(drop=True),
         hide_index=True,
+        width="content",
     )
 
 st.write("Centrales avec **données manquantes**:")
@@ -286,6 +332,7 @@ else:
     st.dataframe(
         s_no_data.index.to_series().to_frame("Adresse").reset_index(drop=True),
         hide_index=True,
+        width="content",
     )
 
 
