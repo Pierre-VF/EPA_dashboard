@@ -22,6 +22,7 @@ TIMEZONE = timezone("Europe/Paris")
 DETAILS_CENTRALES = {i["prm"]: i for i in st.secrets["CENTRALES"]["mapping"]}
 ADRESSE_PAR_PRM = {k: v.get("adresse") for k, v in DETAILS_CENTRALES.items()}
 KWC_PAR_PRM = {k: v.get("kwc") for k, v in DETAILS_CENTRALES.items()}
+KWC_PAR_ADDRESSE = {ADRESSE_PAR_PRM[k]: v for k, v in KWC_PAR_PRM.items()}
 
 
 class Settings(pydantic_settings.BaseSettings):
@@ -239,6 +240,11 @@ fig_prod_kwh_per_kwc.update_layout(dict(yaxis=dict(title="Production [kWh/kWc]")
 st.plotly_chart(fig_prod_kwh_per_kwc, use_container_width=True)
 
 st.write("Production de la veille pour les centrales actives:")
+
+
+df_active_yesterday["kWc"] = [
+    KWC_PAR_ADDRESSE[i] for i in df_active_yesterday.index.to_list()
+]
 st.dataframe(df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"))
 
 
@@ -267,9 +273,20 @@ else:
 
 st.write("## Production totale")
 
-st.write("Production totale")
+# Séparation entre petites et grandes centrales (limite = 36 kWc)
+c_under_36kwc = [k for k, v in KWC_PAR_ADDRESSE.items() if v <= 36]
+c_over_36kwc = [k for k, v in KWC_PAR_ADDRESSE.items() if v > 36]
+
+st.write("Production totale (> 36 kWc)")
 fig_prod_totale = px.line(
-    df_x,
+    df_x[c_over_36kwc],
+)
+fig_prod_totale.update_layout(dict(yaxis=dict(title="Production [kWh]")))
+st.plotly_chart(fig_prod_totale, use_container_width=True)
+
+st.write("Production totale (<= 36 kWc)")
+fig_prod_totale = px.line(
+    df_x[c_under_36kwc],
 )
 fig_prod_totale.update_layout(dict(yaxis=dict(title="Production [kWh]")))
 st.plotly_chart(fig_prod_totale, use_container_width=True)

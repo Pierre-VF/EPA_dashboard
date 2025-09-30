@@ -17,7 +17,7 @@ Notes:
    ```
 
 3. Créer le fichier de configuration (dans "*.streamlit/secrets.toml*").
-   
+
    ```
    ENEDIS_API_USERNAME = "..."
    ENEDIS_API_PASSWORD = "..."
@@ -27,8 +27,8 @@ Notes:
    [CENTRALES]
    mapping = [
       {prm="...", adresse="...", kwc=123},
-      {prm="...", adresse="...", kwc=456},   
-   ] 
+      {prm="...", adresse="...", kwc=456},
+   ]
    ```
 
    Où les données du "mapping" sont à ajuster pour vos centrales (une ligne par centrale):
@@ -46,7 +46,7 @@ Notes:
 
 ### Comment déployer une copie sur Streamlit
 
-Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions. Le déploiement peut se faire directement à partir de ce Github (en ajudstant tous les paramètres dans le fichier TOML). Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
+Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions (pour la gestion ultérieure, le lien est ensuite [celui-ci](https://share.streamlit.io/)). Le déploiement peut se faire directement à partir de ce Github (en ajudstant tous les paramètres dans le fichier TOML). Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
 
 Suggestions opérationnelles:
 
@@ -54,5 +54,5 @@ Suggestions opérationnelles:
 
 ## Crédits et contributions
 
-Le code est gracieusement mis à disposition par la coopérative citoyenne de production d'énergie [Énergies partagées en Alsace](https://energies-partagees-alsace.coop/) et développé par 
+Le code est gracieusement mis à disposition par la coopérative citoyenne de production d'énergie [Énergies partagées en Alsace](https://energies-partagees-alsace.coop/) et développé par
 [PierreVF Consulting](https://www.pierrevf.consulting/).
