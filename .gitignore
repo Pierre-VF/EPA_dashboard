@@ -166,3 +166,4 @@ cython_debug/
 
 # Défini par l'utilisateur
 .data/
+pvf_*
