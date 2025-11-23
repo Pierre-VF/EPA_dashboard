@@ -1,11 +1,11 @@
 import os
 from pickle import dump, load
 
-from src.config import SETTINGS
+from src.config import PARAMETRES
 
 
 def local_disk_cache(f_in):
-    if str(SETTINGS.MODE) == "PRODUCTION":
+    if str(PARAMETRES.MODE) == "PRODUCTION":
         # Short circuiting
         return f_in
 

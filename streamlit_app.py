@@ -6,7 +6,7 @@ import plotly.express as px
 import streamlit as st
 from pytz import timezone
 from src.cache_io import local_disk_cache
-from src.config import CENTRALES, SETTINGS
+from src.config import CENTRALES, PARAMETRES
 from src.enedis_io import donnees_de_production_horaires_kwh
 
 # ------------------------------------------------------
@@ -34,12 +34,12 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
         t_end = current_day
     prms = list(ID_PAR_PRM.keys())
     t_start = t_end - timedelta(days=3)
-    df = donnees_de_production_horaires_kwh(prms, start=t_start, end=t_end)
+    df = donnees_de_production_horaires_kwh(prms, debut=t_start, fin=t_end)
     return df
 
 
 @local_disk_cache
-def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+def data_pour_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     t0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     df = donnees_de_production(t0.date())
     df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24) : t0].interpolate()
@@ -66,7 +66,7 @@ def data_for_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float)
 
 
-def show_dataframe_as_figure_in_streamlit(df: pd.DataFrame, yaxis_title: str) -> None:
+def dataframe_vers_figure_streamlit(df: pd.DataFrame, yaxis_title: str) -> None:
     tickvals = pd.date_range(
         start=df.index[0].floor("D") + pd.Timedelta(hours=12),
         end=df.index[-1].ceil("D") + pd.Timedelta(hours=12),
@@ -144,31 +144,27 @@ st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
 
 # Loading data
-df_x, df_x_norm, s_yesterday, s_normaliser = data_for_plot()
+df_x, df_x_norm, s_hier, s_normaliser = data_pour_plot()
 
 # Marquage des erreurs
-s_yesterday.loc[s_yesterday < 0] = -1
+s_hier.loc[s_hier < 0] = -1
 
 st.write("Production pour les centrales actives:")
-s_yesterday_norm = s_yesterday / s_normaliser
-df_active_yesterday = s_yesterday_norm[(s_yesterday_norm > 0)].to_frame(
-    "Production [kWh/kWc]"
-)
-df_active_yesterday["Production [kWh]"] = s_yesterday[(s_yesterday > 0)]
+s_hier_norm = s_hier / s_normaliser
+df_active_hier = s_hier_norm[(s_hier_norm > 0)].to_frame("Production [kWh/kWc]")
+df_active_hier["Production [kWh]"] = s_hier[(s_hier > 0)]
 
-show_dataframe_as_figure_in_streamlit(
-    df_x_norm[df_active_yesterday.index],
+dataframe_vers_figure_streamlit(
+    df_x_norm[df_active_hier.index],
     "Production [kWh/kWc]",
 )
 
 st.write("Production de la veille pour les centrales actives:")
 
 
-df_active_yesterday["kWc"] = [
-    KWC_PAR_ID[i] for i in df_active_yesterday.index.to_list()
-]
+df_active_hier["kWc"] = [KWC_PAR_ID[i] for i in df_active_hier.index.to_list()]
 st.dataframe(
-    df_active_yesterday.round(decimals=2).sort_values("Production [kWh/kWc]"),
+    df_active_hier.round(decimals=2).sort_values("Production [kWh/kWc]"),
     width="content",
 )
 
@@ -176,7 +172,7 @@ st.dataframe(
 st.write("## Centrales inactives ou sans données")
 
 st.write("Centrales avec **production à zéro**:")
-s_no_production = s_yesterday[s_yesterday == 0]
+s_no_production = s_hier[s_hier == 0]
 if len(s_no_production) == 0:
     st.write("(Aucune)")
 else:
@@ -187,7 +183,7 @@ else:
     )
 
 st.write("Centrales avec **données manquantes**:")
-s_no_data = s_yesterday[s_yesterday < 0]
+s_no_data = s_hier[s_hier < 0]
 if len(s_no_data) == 0:
     st.write("(Aucune)")
 else:
@@ -201,18 +197,18 @@ else:
 st.write("## Production totale")
 
 # Séparation entre petites et grandes centrales (limite = 36 kWc)
-c_under_36kwc = [k for k, v in KWC_PAR_ID.items() if v <= 36]
-c_over_36kwc = [k for k, v in KWC_PAR_ID.items() if v > 36]
+c_moins_de_36kwc = [k for k, v in KWC_PAR_ID.items() if v <= 36]
+c_plus_de_36kwc = [k for k, v in KWC_PAR_ID.items() if v > 36]
 
 st.write("Production totale (> 36 kWc)")
-show_dataframe_as_figure_in_streamlit(
-    df_x[c_over_36kwc],
+dataframe_vers_figure_streamlit(
+    df_x[c_plus_de_36kwc],
     "Production [kWh]",
 )
 
 st.write("Production totale (<= 36 kWc)")
-show_dataframe_as_figure_in_streamlit(
-    df_x[c_under_36kwc],
+dataframe_vers_figure_streamlit(
+    df_x[c_moins_de_36kwc],
     "Production [kWh]",
 )
 
@@ -221,7 +217,7 @@ show_dataframe_as_figure_in_streamlit(
 def verifier_mot_de_passe_et_rafraichir():
     mdp = st.text_input("Mot de passe")
     if st.button("Submit"):
-        if mdp == SETTINGS.MOT_DE_PASSE:
+        if mdp == PARAMETRES.MOT_DE_PASSE:
             donnees_de_production.clear()
             st.rerun()
             st.write(

@@ -16,8 +16,8 @@ def export_comptabilite_de_production() -> str:
         debut_annee_precedente = date(aujourdhui.year - 1, 1, 1)
         df = donnees_de_production_journalieres_kwh(
             [i.prm for i in CENTRALES],
-            start=debut_annee_precedente,
-            end=aujourdhui,
+            debut=debut_annee_precedente,
+            fin=aujourdhui,
         )
         print(df)
         return df
