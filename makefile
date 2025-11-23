@@ -13,6 +13,8 @@ code_cleanup:
 	uv tool run pre-commit install
 	uv tool run pre-commit run --all
 
+cli:
+	uv run src/routines/__init__.py
 
 cli_journalier:
 	uv run src/routines/alarme_quotidienne.py
