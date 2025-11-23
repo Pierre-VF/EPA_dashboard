@@ -8,35 +8,50 @@ Notes:
 
 ### Comment installer l'application localement?
 
-1. Créer un environnement virtuel dans Python et l'activer
+1. S'assurer d'avoir UV installé localement [(détails d'installation ici)](https://docs.astral.sh/uv/getting-started/installation/).
 
-2. Installer les dépendances:
+2. Installer les dépendances dans un nouvel environnement UV.
 
    ```
-   pip install -r requirements.txt
+   uv sync --all-groups
    ```
 
 3. Créer le fichier de configuration (dans "*.streamlit/secrets.toml*").
 
    ```
+   # Identifiants de l'API d'Enedis
    ENEDIS_API_USERNAME = "..."
    ENEDIS_API_PASSWORD = "..."
 
+   # DEVELOPEMENT ou PRODUCTION selon l'utilisation voulue
    MODE = "DEVELOPMENT"
 
+   # Mot de passe pour l'option de rafraichissement des données
+   MOT_DE_PASSE = "..."
+
+   # Identifiants Sendgrid pour l'envoi des emails [FACULTATIFS]
+   SENDGRID_API_KEY = "..."
+   SENDGRID_SENDER_ADDRESS = "..."
+
+   # Destinataires (séparés par ";") des emails d'alertes [FACULTATIF]
+   DESTINATAIRES_ALERTES = "... [séparer plusieurs entrées par ;]..."
+
+   # Mappings des centrales à charger
    [CENTRALES]
    mapping = [
-      {prm="...", adresse="...", kwc=123},
-      {prm="...", adresse="...", kwc=456},
+      {prm="...", adresse="...", kwc=123, debut="2014-01-01", nom="..."},
+      {prm="...", adresse="...", kwc=9, debut="", nom="...", donnees_disponibles=0}
    ]
    ```
 
-   Où les données du "mapping" sont à ajuster pour vos centrales (une ligne par centrale):
-   - PRM: numéro de compteur
-   - adresse: utilisé pour le nommage de vos installations (au choix, ceci est juste pour l'affichage)
-   - kwc: la puissance installée de votre installation.
+   `SENDGRID_API_KEY`, `SENDGRID_SENDER_ADDRESS` et `DESTINATAIRES_ALERTES` sont facultatifs (ils servent simplement l'envoi de mail avec [Sendgrid](https://sendgrid.com/))
 
-   Note: pour passer en production, la ligne "MODE" doit être remplacée par (MODE =  "PRODUCTION").
+   Où les données du `mapping` sont à ajuster pour vos centrales (une ligne par centrale, vous pouvez en ajouter autant que vous voulez tant que le format [TOML](https://toml.io/fr/) est respecté):
+   - `prm`: numéro de compteur
+   - `nom`: utilisé pour le nommage de vos installations (au choix, ceci est juste pour l'affichage)
+   - `kwc`: la puissance installée de votre installation
+
+   Note: pour passer en production, la ligne "MODE" doit être remplacée par (`MODE =  "PRODUCTION"`). Le mode développement ci-dessus utilise un cache local sur le disque pour fluidifier les appels à l'API d'Enedis.
 
 4. Lancer l'application:
 
@@ -48,9 +63,6 @@ Notes:
 
 Créer un compte sur [Streamlit Community Cloud](https://streamlit.io) et suivre les instructions (pour la gestion ultérieure, le lien est ensuite [celui-ci](https://share.streamlit.io/)). Le déploiement peut se faire directement à partir de ce Github (en ajudstant tous les paramètres dans le fichier TOML). Le fichier "*secret.toml*" à utiliser est celui créé ci-dessus.
 
-Suggestions opérationnelles:
-
-- Pour conserver votre service en état opérationnel, il peut être utile d'utiliser un CRON pour y faire régulièrement appel (un utilitaire gratuit pour faire cela se trouve [ici](https://cron-job.org/en/)). Dans ce cas, il est recommandé d'y configurer un appel toutes les 4 heures.
 
 ## Crédits et contributions
 
