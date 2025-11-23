@@ -1,11 +1,13 @@
 [project]
 name = "streamlit-app"
-version = "0.2.0"
+version = "0.3.0"
 description = "App to visualise PV production"
 readme = "README.md"
 requires-python = ">=3.13"
+packages = [
+    "src",
+]
 dependencies = [
-    "apscheduler>=3.11.0",
     "enedis-data-io",
     "numpy>=2.1",
     "pandas>=2.2.2",
@@ -16,5 +18,14 @@ dependencies = [
     "streamlit>=1.50.0",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.uv.sources]
 enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.2.0" }
+
+[dependency-groups]
+cli = [
+    "openpyxl>=3.1.5",
+]
