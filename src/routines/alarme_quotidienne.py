@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-from src.config import CENTRALES
-from src.email_io import email_alerts_to, send_email
+from src.config import CENTRALES, PARAMETRES
+from src.email_io import envoyer_email
 from src.enedis_io import (
     donnees_de_production_horaires_kwh,
 )
@@ -12,22 +12,22 @@ def verification_quotidienne():
     prms = [i.prm for i in CENTRALES]
     t_start = t_end - timedelta(days=1)
 
-    df = donnees_de_production_horaires_kwh(prms, start=t_start, end=t_end)
+    df = donnees_de_production_horaires_kwh(prms, debut=t_start, fin=t_end)
 
-    s_production_yesterday = df.sum()
-    s_no_production = s_production_yesterday[s_production_yesterday == 0]
-    s_no_data = s_production_yesterday[s_production_yesterday < 0]
+    s_production_hier = df.sum()
+    s_zero_production = s_production_hier[s_production_hier <= 0]
+    s_zero_data = s_production_hier[s_production_hier < 0]
 
     prm_to_id = {i.prm: i.identifiant for i in CENTRALES}
 
     msgs = []
-    if len(s_no_production) > 0:
+    if len(s_zero_production) > 0:
         msgs += ["Pas de production hier sur les centrales suivantes:"]
-        for i in s_no_production.index.to_list():
+        for i in s_zero_production.index.to_list():
             msgs += [f"- {prm_to_id[i]}"]
-    if len(s_no_data) > 0:
+    if len(s_zero_data) > 0:
         msgs += ["", "Pas de données hier sur les centrales suivantes:"]
-        for i in s_no_data.index.to_list():
+        for i in s_zero_data.index.to_list():
             msgs += [f"- {prm_to_id[i]}"]
 
     if len(msgs) < 1:
@@ -40,7 +40,8 @@ def verification_quotidienne():
         print(msg)
         print(" ")
 
-        send_email(
+        email_alerts_to = PARAMETRES.DESTINATAIRES_ALERTES.split(";")
+        envoyer_email(
             msg,
             title="Alerte production PV",
             recipients=email_alerts_to,

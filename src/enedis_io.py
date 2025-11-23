@@ -7,24 +7,24 @@ from datetime import date
 import pandas as pd
 from enedis_data_io.fr import ApiEntreprises
 
-from src.config import SETTINGS
+from src.config import PARAMETRES
 
 api_io = ApiEntreprises(
-    client_id=SETTINGS.ENEDIS_API_USERNAME,
-    client_secret=SETTINGS.ENEDIS_API_PASSWORD,
+    client_id=PARAMETRES.ENEDIS_API_USERNAME,
+    client_secret=PARAMETRES.ENEDIS_API_PASSWORD,
 )
 
 
 def donnees_de_production_horaires_kwh(
     prms: list[str],
-    start: date,
-    end: date,
+    debut: date,
+    fin: date,
 ) -> pd.DataFrame:
     df = None
     c_erreurs = []
     for c in prms:
         try:
-            df_c = api_io.production_par_demi_heure(prm=c, start=start, end=end)
+            df_c = api_io.production_par_demi_heure(prm=c, start=debut, end=fin)
             df_c[c] = df_c["production_wh"].astype(float) / 1000
             if df is None:
                 df = df_c[[c]]
@@ -46,14 +46,14 @@ def donnees_de_production_horaires_kwh(
 
 def donnees_de_production_journalieres_kwh(
     prms: list[str],
-    start: date,
-    end: date,
+    debut: date,
+    fin: date,
 ) -> pd.DataFrame:
     df = None
     c_erreurs = []
     for c in prms:
         try:
-            df_c = api_io.production_journaliere(prm=c, start=start, end=end)
+            df_c = api_io.production_journaliere(prm=c, start=debut, end=fin)
             df_c[c] = df_c["production_wh"].astype(float) / 1000
             if df is None:
                 df = df_c[[c]]

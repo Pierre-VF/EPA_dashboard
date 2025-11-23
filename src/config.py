@@ -12,7 +12,7 @@ from pydantic import BaseModel
 # ------------------------------------------------------------------------------------
 
 
-class Settings(pydantic_settings.BaseSettings):
+class _Configuration(pydantic_settings.BaseSettings):
     # Definis pour une application enregistrée auprès d'Enedis
     #   "https://mon-compte-entreprise.enedis.fr/vos-donnees-energetiques/vos-api"
     ENEDIS_API_USERNAME: str
@@ -28,13 +28,13 @@ class Settings(pydantic_settings.BaseSettings):
     )
 
 
-_CONFIG_FILE = os.path.join(
+_FICHIER_CONFIGURATION_TOML = os.path.join(
     pathlib.Path(os.path.dirname(__file__)).parent,
     ".streamlit/secrets.toml",
 )
 
-if os.path.exists(_CONFIG_FILE):
-    with open(_CONFIG_FILE, "r") as f:
+if os.path.exists(_FICHIER_CONFIGURATION_TOML):
+    with open(_FICHIER_CONFIGURATION_TOML, "r") as f:
         toml_conf = toml.load(f)
     print("Configuration initialisée depuis secrets.toml")
 else:
@@ -51,7 +51,7 @@ for i in ["ROUTINES_ACTIVES"]:
     if i in toml_conf:
         toml_conf.pop(i)
 
-SETTINGS = Settings(**toml_conf)
+PARAMETRES = _Configuration(**toml_conf)
 
 
 # ------------------------------------------------------------------------------------
@@ -63,6 +63,7 @@ class Centrale(BaseModel):
     kwc: float
     adresse: str
     nom: str | None = None
+    donnees_disponibles: bool = True
 
     @property
     def identifiant(self) -> str:
@@ -80,5 +81,17 @@ class Centrale(BaseModel):
             x = date(annee, 1, 1)
         return x
 
+    @property
+    def alertes_actives(self) -> bool:
+        actives = (len(PARAMETRES.DESTINATAIRES_ALERTES) > 0) and (
+            len(PARAMETRES.SENDGRID_API_KEY) > 0
+        )
+        return actives
 
-CENTRALES = [Centrale(**i) for i in _donnees_brutes_centrales]
+
+# L'analyse est restreinte aux centrales pour lesquelles des données sont disponibles
+CENTRALES = [
+    i
+    for i in [Centrale(**i) for i in _donnees_brutes_centrales]
+    if i.donnees_disponibles
+]
