@@ -167,3 +167,5 @@ cython_debug/
 # Défini par l'utilisateur
 .data/
 pvf_*
+*.xlsx
+*.pkl

@@ -19,7 +19,6 @@ class Settings(pydantic_settings.BaseSettings):
     ENEDIS_API_PASSWORD: str
     MODE: str = "PRODUCTION"
     MOT_DE_PASSE: str = ""
-    ROUTINES_ACTIVES: bool = False
     SENDGRID_API_KEY: str = ""
     SENDGRID_SENDER_ADDRESS: str = ""
     DESTINATAIRES_ALERTES: str = ""  # si plusieurs, séparer par ";"
@@ -46,6 +45,11 @@ if "CENTRALES" in toml_conf:
 else:
     _donnees_brutes_centrales = []
 
+
+# Retrait de toutes les données de configuration inutiles
+for i in ["ROUTINES_ACTIVES"]:
+    if i in toml_conf:
+        toml_conf.pop(i)
 
 SETTINGS = Settings(**toml_conf)
 
