@@ -1,6 +1,6 @@
 [project]
 name = "streamlit-app"
-version = "0.3.1"
+version = "0.3.2"
 description = "App to visualise PV production"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -23,7 +23,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.2.0" }
+enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.3.0" }
 
 [dependency-groups]
 cli = [

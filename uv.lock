@@ -228,8 +228,8 @@ wheels = [
 
 [[package]]
 name = "enedis-data-io"
-version = "0.2.0"
-source = { git = "https://github.com/Pierre-VF/Enedis-data-io.git?rev=v_0.2.0#2c0bde958004cc403c56a73e85650b09b85b3ccc" }
+version = "0.3.0"
+source = { git = "https://github.com/Pierre-VF/Enedis-data-io.git?rev=v_0.3.0#d8806088588f79f17681cb43b7251aafe5e82791" }
 dependencies = [
     { name = "pandas" },
     { name = "pycryptodome" },
@@ -983,7 +983,7 @@ wheels = [
 
 [[package]]
 name = "streamlit-app"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "." }
 dependencies = [
     { name = "enedis-data-io" },
@@ -1004,7 +1004,7 @@ cli = [
 
 [package.metadata]
 requires-dist = [
-    { name = "enedis-data-io", git = "https://github.com/Pierre-VF/Enedis-data-io.git?rev=v_0.2.0" },
+    { name = "enedis-data-io", git = "https://github.com/Pierre-VF/Enedis-data-io.git?rev=v_0.3.0" },
     { name = "numpy", specifier = ">=2.1" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "plotly", specifier = ">=5.24.1" },
