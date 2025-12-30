@@ -16,8 +16,11 @@ from src.enedis_io import donnees_de_production_horaires_kwh
 # Détails des centrales
 TIMEZONE = timezone("Europe/Paris")
 DETAILS_CENTRALES = {i.prm: i for i in CENTRALES}
-ID_PAR_PRM = {k: v.identifiant for k, v in DETAILS_CENTRALES.items()}
 KWC_PAR_PRM = {k: v.kwc for k, v in DETAILS_CENTRALES.items()}
+ID_PAR_PRM = {
+    k: f"[{int(DETAILS_CENTRALES[k].kwc)} kWc] {v.identifiant}"
+    for k, v in DETAILS_CENTRALES.items()
+}
 KWC_PAR_ID = {ID_PAR_PRM[k]: v for k, v in KWC_PAR_PRM.items()}
 
 
@@ -140,6 +143,20 @@ st.set_page_config(
 )
 
 
+def _trick_dataframe_print(df, hide_index: bool = False):
+    # Trick to make the content match with margin
+    df_c = df[[]].copy()
+    f = lambda x: f" {str(x)}   "
+    for c in df.columns:
+        df_c[f(c)] = df[c].apply(f)
+    st.dataframe(
+        df_c,
+        width="content",
+        height="content",
+        hide_index=hide_index,
+    )
+
+
 st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
 
@@ -163,9 +180,8 @@ st.write("Production de la veille pour les centrales actives:")
 
 
 df_active_hier["kWc"] = [KWC_PAR_ID[i] for i in df_active_hier.index.to_list()]
-st.dataframe(
-    df_active_hier.round(decimals=2).sort_values("Production [kWh/kWc]"),
-    width="content",
+_trick_dataframe_print(
+    df_active_hier.round(decimals=2).sort_values("Production [kWh/kWc]")
 )
 
 
@@ -176,10 +192,9 @@ s_no_production = s_hier[s_hier == 0]
 if len(s_no_production) == 0:
     st.write("(Aucune)")
 else:
-    st.dataframe(
+    _trick_dataframe_print(
         s_no_production.index.to_series().to_frame("Adresse").reset_index(drop=True),
         hide_index=True,
-        width="content",
     )
 
 st.write("Centrales avec **données manquantes**:")
@@ -187,10 +202,9 @@ s_no_data = s_hier[s_hier < 0]
 if len(s_no_data) == 0:
     st.write("(Aucune)")
 else:
-    st.dataframe(
+    _trick_dataframe_print(
         s_no_data.index.to_series().to_frame("Adresse").reset_index(drop=True),
         hide_index=True,
-        width="content",
     )
 
 
