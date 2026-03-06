@@ -29,7 +29,7 @@ def donnees_de_production_horaires_kwh(
             if df is None:
                 df = df_c[[c]]
             else:
-                df[c] = df_c[c]
+                df[c] = df_c[c].copy()
 
         except Exception as e:
             print(f"Error with {c} : {e}")
