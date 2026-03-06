@@ -23,7 +23,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.3.0" }
+enedis-data-io = { git = "https://github.com/Pierre-VF/Enedis-data-io.git", rev = "v_0.3.2" }
 
 [dependency-groups]
 cli = [

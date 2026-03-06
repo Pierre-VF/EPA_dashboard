@@ -42,12 +42,17 @@ def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
 
 
 @local_disk_cache
-def data_pour_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+def cached_enedis_data():
     t0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     df = donnees_de_production(t0.date())
+    return df, t0
+
+
+def data_pour_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    df, t0 = cached_enedis_data()
     df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24) : t0].interpolate()
     df_x_norm = df_x[[]].copy()
-    s_yesterday = df[t0 - timedelta(hours=24) : t0].resample("h").mean().sum()
+    s_yesterday = df[t0 - timedelta(hours=24) : t0].resample("h").sum().sum()
     for k, v in KWC_PAR_PRM.items():
         df_x_norm[k] = df_x[k] / v
 
@@ -208,7 +213,7 @@ else:
     )
 
 
-st.write("## Production totale")
+st.write("## Puissance moyenne produite")
 
 # Séparation entre petites et grandes centrales (limite = 36 kWc)
 c_moins_de_36kwc = [k for k, v in KWC_PAR_ID.items() if v <= 36]
@@ -217,13 +222,13 @@ c_plus_de_36kwc = [k for k, v in KWC_PAR_ID.items() if v > 36]
 st.write("Production totale (> 36 kWc)")
 dataframe_vers_figure_streamlit(
     df_x[c_plus_de_36kwc],
-    "Production [kWh]",
+    "Production (puissance moyenne) [kW]",
 )
 
 st.write("Production totale (<= 36 kWc)")
 dataframe_vers_figure_streamlit(
     df_x[c_moins_de_36kwc],
-    "Production [kWh]",
+    "Production (puissance moyenne) [kW]",
 )
 
 
