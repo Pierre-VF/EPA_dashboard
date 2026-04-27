@@ -5,9 +5,13 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from pytz import timezone
+
 from src.cache_io import local_disk_cache
 from src.config import CENTRALES, PARAMETRES
-from src.enedis_io import donnees_de_production_horaires_kwh
+from src.enedis_io import (
+    donnees_de_production_horaires_kwh,
+    donnees_de_production_journalieres_kwh,
+)
 
 # ------------------------------------------------------
 #  Settings and base methods
@@ -30,26 +34,39 @@ KWC_PAR_ID = {ID_PAR_PRM[k]: v for k, v in KWC_PAR_PRM.items()}
 
 
 @st.cache_data(ttl=12 * 3600, max_entries=2)  # TTL en secondes
-def donnees_de_production(current_day: date | None = None) -> pd.DataFrame:
+def donnees_de_production(
+    current_day: date | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     if current_day is None:
         t_end = datetime.today().date()
     else:
         t_end = current_day
     prms = list(ID_PAR_PRM.keys())
     t_start = t_end - timedelta(days=3)
-    df = donnees_de_production_horaires_kwh(prms, debut=t_start, fin=t_end)
-    return df
+    df_courbe_de_charge = donnees_de_production_horaires_kwh(
+        prms, debut=t_start, fin=t_end
+    )
+    df_prod_journaliere = donnees_de_production_journalieres_kwh(
+        prms, debut=t_start, fin=t_end
+    )
+    return df_courbe_de_charge, df_prod_journaliere
 
 
 @local_disk_cache
-def cached_enedis_data():
+def cached_enedis_data() -> tuple[pd.DataFrame, datetime, pd.DataFrame]:
     t0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    df = donnees_de_production(t0.date())
-    return df, t0
+    df, df_jour = donnees_de_production(t0.date())
+    return df, t0, df_jour
 
 
-def data_pour_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    df, t0 = cached_enedis_data()
+def data_pour_plot() -> tuple[
+    pd.DataFrame,
+    pd.DataFrame,
+    pd.Series,
+    pd.Series,
+    pd.DataFrame,
+]:
+    df, t0, df_jour = cached_enedis_data()
     df_x: pd.DataFrame = df[t0 - timedelta(hours=4 * 24) : t0].interpolate()
     df_x_norm = df_x[[]].copy()
     s_yesterday = df[t0 - timedelta(hours=24) : t0].resample("h").sum().sum()
@@ -71,7 +88,7 @@ def data_pour_plot() -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         x_kwc.append(i_kwc)
     s_normaliser = pd.Series(x_kwc, index=x_adresse)
 
-    return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float)
+    return df_x, df_x_norm, s_yesterday, s_normaliser.astype(float), df_jour
 
 
 def dataframe_vers_figure_streamlit(df: pd.DataFrame, yaxis_title: str) -> None:
@@ -149,13 +166,8 @@ st.set_page_config(
 
 
 def _trick_dataframe_print(df, hide_index: bool = False):
-    # Trick to make the content match with margin
-    df_c = df[[]].copy()
-    f = lambda x: f" {str(x)}   "
-    for c in df.columns:
-        df_c[f(c)] = df[c].apply(f)
     st.dataframe(
-        df_c,
+        df,
         width="content",
         height="content",
         hide_index=hide_index,
@@ -166,7 +178,7 @@ st.title("Production énergétique des centrales d'EPA")
 st.write("## Centrales actives")
 
 # Loading data
-df_x, df_x_norm, s_hier, s_normaliser = data_pour_plot()
+df_x, df_x_norm, s_hier, s_normaliser, df_jour = data_pour_plot()
 
 # Marquage des erreurs
 s_hier.loc[s_hier < 0] = -1
@@ -181,12 +193,19 @@ dataframe_vers_figure_streamlit(
     "Production [kWh/kWc]",
 )
 
-st.write("Production de la veille pour les centrales actives:")
+st.write("Production récente pour les centrales actives (kWh)")
 
 
-df_active_hier["kWc"] = [KWC_PAR_ID[i] for i in df_active_hier.index.to_list()]
+df_jour = df_jour.rename(columns=ID_PAR_PRM)
+df_jour.index = df_jour.index.to_series().apply(lambda x: x.date())
+t_veille = df_jour.index.max()
+df_jour_pour_ui = df_jour.sort_index(ascending=False).T.round(decimals=1)
+df_jour_pour_ui["kWc"] = [float(KWC_PAR_ID[i]) for i in df_jour_pour_ui.index.to_list()]
+df_jour_pour_ui[f"{t_veille}/kWc"] = (
+    df_jour_pour_ui[t_veille] / df_jour_pour_ui["kWc"]
+).round(decimals=1)
 _trick_dataframe_print(
-    df_active_hier.round(decimals=2).sort_values("Production [kWh/kWc]")
+    df_jour_pour_ui,
 )
 
 
