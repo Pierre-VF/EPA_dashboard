@@ -22,8 +22,7 @@ TIMEZONE = timezone("Europe/Paris")
 DETAILS_CENTRALES = {i.prm: i for i in CENTRALES}
 KWC_PAR_PRM = {k: v.kwc for k, v in DETAILS_CENTRALES.items()}
 ID_PAR_PRM = {
-    k: f"[{int(DETAILS_CENTRALES[k].kwc)} kWc] {v.identifiant}"
-    for k, v in DETAILS_CENTRALES.items()
+    k: f"[{int(v.kwc)} kWc] {v.identifiant}" for k, v in DETAILS_CENTRALES.items()
 }
 KWC_PAR_ID = {ID_PAR_PRM[k]: v for k, v in KWC_PAR_PRM.items()}
 
@@ -105,7 +104,13 @@ def dataframe_vers_figure_streamlit(df: pd.DataFrame, yaxis_title: str) -> None:
             tickvals=tickvals,
             tickformat="%Y-%m-%d\n%H:%M",
         ),
-        yaxis=dict(title=yaxis_title),
+        yaxis=dict(
+            title=yaxis_title,
+            # Affichage des lignes en gris foncé épais pour faciliter la lecture
+            gridwidth=1,
+            gridcolor="#474646",
+            griddash="dash",
+        ),
         # Affichage de la légende sous le graphique
         legend=dict(
             orientation="h",
